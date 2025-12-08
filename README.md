@@ -1,94 +1,77 @@
 # Sistema Web de Transporte de Paquetes con Reservas
 
-Arquitectura académica con **NestJS 11**, **Angular 20** y **PostgreSQL 16**, dockerizada por capas.
+Stack académico: **NestJS 11**, **Angular 20**, **PostgreSQL 16**, dockerizado por capas.
 
 ## Requisitos
 - Docker y docker-compose
 - Puertos libres: `5432` (DB), `3000` (API), `4200` (Frontend)
 
-## Variables de entorno
-Ejemplos listos para copiar:
+## Variables de entorno y configuración
+Plantillas:
 - `cp .env.example .env`
-- `cp backend/.env.example backend/.env`
+- `cp backend/.env.example backend/.env` (local)
+- `cp backend/.env.docker backend/.env.docker` (compose principal, usa host `db`)
 - `cp frontend/.env.example frontend/.env`
-- `cp db/.env.example db/.env` (DB principal)
-- `cp db/.env.test.example db/.env.test` (DB de pruebas)
+- `cp db/.env.example db/.env` (principal)
+- `cp db/.env.test.example db/.env.test` (pruebas)
 
-Variables clave:
-- Backend (`backend/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `JWT_SECRET`
-  - En Docker usar `DB_HOST=db` (usa `backend/.env.docker`). En ejecución local usar `DB_HOST=localhost`.
+Claves por capa:
+- Backend (`backend/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `JWT_SECRET`  
+  - Docker: `DB_HOST=db` con `.env.docker`. Local: `DB_HOST=localhost`.
 - Frontend (`frontend/.env`): `API_URL`, `FRONTEND_PORT`
 - BD (`db/.env`): `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_PORT`
-- Puertos externos (root `.env` opcional): `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`
+- Root opcional (`.env`): `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`
 
-Base de datos de pruebas (`/db`)
-- `docker compose up -d` dentro de `/db` levanta Postgres en `localhost:5432`
-- Ajusta `DB_HOST=localhost` y `DB_PORT=5432` en `backend/.env` para conectar al contenedor local.
-- En el compose principal, `db` monta `init-db.sh` para crear automáticamente `parcels`/`parcels_test` y usa `backend/.env.docker`.
-
-## Ejecución rápida
-```bash
-docker-compose up --build
+## Arquitectura (Mermaid)
+```mermaid
+flowchart LR
+  A[Angular SPA] -- REST --> B[NestJS API]
+  B -- TypeORM --> C[(PostgreSQL)]
+  B -- JWT --> B
+  B -- Webhook --> D[Pagos mock]
+  B -- Notif stub --> E[Notificaciones]
 ```
 
+Backend módulos:
+```mermaid
+flowchart TD
+  Auth --> Users
+  Users --> Addresses
+  Quotes --> Shipments
+  Shipments --> Status[Status History]
+  Ops[Ops/Rutas] --> Shipments
+  Payments --> Shipments
+```
+
+Frontend páginas:
+```mermaid
+flowchart TD
+  Home --> Cotizar
+  Home --> Reservar
+  Reservar --> BuscarCliente
+  Home --> Tracking
+  Home --> Admin
+  Home --> Login
+  Home --> Registro
+```
+
+## Ejecución con Docker
+```bash
+docker compose up --build
+```
 Servicios:
-- Frontend (Angular + Nginx): http://localhost:4200
-- Backend (NestJS): http://localhost:3000
-- Postgres: localhost:5432 (DB/USER/PASS: parcels)
+- Frontend: http://localhost:4200
+- Backend: http://localhost:3000
+- Postgres: localhost:5432 (USER/PASS: parcels, DB `parcels` creada por `init-db.sh`). El backend espera a DB healthy.
 
-Para detener: `docker-compose down` (agrega `-v` si quieres eliminar el volumen de datos `db-data`).
+Detener: `docker compose down` (agrega `-v` para borrar volumen `db-data`).
 
-## Variables de entorno relevantes
-Se definen en `docker-compose.yml`:
-- Backend: `DB_HOST=db`, `DB_PORT=5432`, `DB_USER=parcels`, `DB_PASS=parcels`, `DB_NAME=parcels`, `PORT=3000`
-- Frontend: `API_URL=http://localhost:3000`
-
-## Uso de la API (REST)
-Base URL: `http://localhost:3000`
-
-- Registro: `POST /auth/register`  
-  Body: `{ "email": "...", "password": "min6", "name": "..." }`
-- Login: `POST /auth/login`  
-  Body: `{ "email": "...", "password": "..." }`
-- Refresh token: `POST /auth/refresh`  
-  Body: `{ "refreshToken": "..." }`
-- Crear cotización: `POST /quotes`  
-  Body: `{ "originZip": "...", "destinationZip": "...", "weightKg": 1, "volumeM3": 0.01, "serviceType": "standard", "shipDate": "YYYY-MM-DD" }`
-- Crear envío/reserva: `POST /shipments`  
-  Body: `{ "originAddress": "...", "destinationAddress": "...", "originZip": "...", "destinationZip": "...", "weightKg": 1, "volumeM3": 0.01, "serviceType": "standard", "pickupDate": "YYYY-MM-DD", "pickupSlot": "09:00-12:00", "priceQuote": 10, "priceFinal": 10, "quoteId": "opcional", "userId": "opcional" }`
-- Listar envíos: `GET /shipments` (filtros: `me=true` requiere Bearer token, `status`, `routeId`, `dateFrom`, `dateTo`)
-- Detalle envío: `GET /shipments/{id}`
-- Tracking: `GET /shipments/{id}/tracking`
-- Operador: actualizar estado `POST /ops/shipments/{id}/status`  
-  Body: `{ "status": "pickup_scheduled", "note": "opcional", "location": "opcional" }`
-- Operador: listar envíos con filtros `GET /ops/shipments`
-- Rutas: crear `POST /ops/routes` Body `{ "name": "...", "region": "...", "vehicle": "...", "driver": "..." }`
-- Asignar ruta: `POST /ops/routes/{routeId}/assign` Body `{ "shipmentId": "..." }`
-- Pagos: iniciar `POST /payments/init` Body `{ "shipmentId": "...", "amount": 10, "currency": "USD" }` → devuelve `checkoutUrl` y `externalRef`; webhook `POST /payments/webhook` Body `{ "externalRef": "...", "status": "paid" }`
-- Perfil: `GET /users/me` (token), direcciones CRUD en `/users/me/addresses` (GET/POST/PATCH/DELETE)
-
-Tokens: se devuelve `accessToken` (Bearer) y `refreshToken` en login/registro. Usar `Authorization: Bearer <accessToken>`.
-
-## Uso del frontend
-1. Abrir http://localhost:4200
-2. Navegación:
-   - **Inicio:** accesos rápidos.
-   - **Cotizar:** formulario para obtener precio y ETA.
-   - **Reservar:** crea envío/reserva; puedes pegar `quoteId` de la cotización.
-   - **Tracking:** ingresa el `id` del envío para ver historial.
-   - **Operador:** lista envíos y permite actualizar estado.
-
-## Estructura de carpetas
-- `backend/`: API NestJS (Node 20, TypeORM, Postgres).
-- `frontend/`: SPA Angular (Nginx en producción).
-- `docker-compose.yml`: orquestación de los tres servicios.
-
-## Desarrollo local (opcional, sin Docker)
+## Desarrollo local (sin Docker)
 Backend:
 ```bash
 cd backend
 npm install
-npm run migration:run   # aplica migraciones (usa .env)
+npm run migration:run   # aplica migraciones usando .env
 npm run start:dev
 ```
 Frontend:
@@ -96,10 +79,34 @@ Frontend:
 cd frontend
 npm install
 npm start
-# abrir http://localhost:4200
 ```
-Ajusta `API_URL` en `frontend/src/environments/environment.ts` si el backend corre en otro host/puerto.
+Ajusta `frontend/.env` (API_URL) si el backend corre en otro host/puerto.
 
-## Notas y pendientes
-- Desactivar `synchronize` en TypeORM y agregar migraciones para entornos serios.
-- Validar direcciones y tracking por código de guía, no solo por `id` de envío.
+## API (REST) principales
+Base: `http://localhost:3000`
+- Auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`
+- Perfil: `GET /users/me` (Bearer), direcciones CRUD `/users/me/addresses`
+- Búsqueda de clientes: `GET /users/search?q=term`
+- Cotizar: `POST /quotes` body `{ originZip, destinationZip, weightKg, volumeM3, serviceType, shipDate? }`
+- Envío/reserva: `POST /shipments` body `{ originAddress, destinationAddress, originZip, destinationZip, weightKg, volumeM3, serviceType, pickupDate, pickupSlot, priceQuote, priceFinal, quoteId?, userId? }`
+- Listar envíos: `GET /shipments` filtros `me=true` (token), `status`, `routeId`, `dateFrom`, `dateTo`
+- Detalle: `GET /shipments/{id}`; Tracking: `GET /shipments/{id}/tracking`
+- Operador: `GET /ops/shipments` (filtros), `POST /ops/shipments/{id}/status`
+- Rutas: `POST /ops/routes`, `POST /ops/routes/{routeId}/assign`, `GET /ops/routes/{routeId}/assignments`
+- Pagos: `POST /payments/init`, `POST /payments/webhook`, `GET /payments/{id}`
+
+Tokens: login/registro devuelven `accessToken` (Bearer) y `refreshToken`.
+
+## Frontend (Angular)
+- Páginas: Inicio, Cotizar, Reservar (incluye buscador de clientes), Tracking, Operador, Login/Registro.
+- Estado de sesión con `AuthService` y `AuthInterceptor` (JWT); `LoggingInterceptor` para trazas en dev.
+
+## Estructura
+- `backend/`: NestJS + TypeORM, migraciones en `src/migrations`, módulos Auth, Users, Quotes, Shipments/Ops, Routes, Payments, Notifications.
+- `frontend/`: Angular standalone components en `src/app/pages`, servicios en `src/app/services`.
+- `db/`: compose de Postgres con `init-db.sh` que crea `parcels` y `parcels_test`.
+- `docker-compose.yml`: orquestación principal (db/backend/frontend).
+
+## Notas
+- Migraciones activadas (`migrationsRun=true`); `synchronize` desactivado.
+- Compose principal usa `backend/.env.docker` y healthcheck en DB para evitar `ECONNREFUSED`.
