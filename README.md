@@ -16,7 +16,7 @@ Ejemplos listos para copiar:
 
 Variables clave:
 - Backend (`backend/.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `JWT_SECRET`
-  - En Docker usar `DB_HOST=db`. En ejecución local usar `DB_HOST=localhost`.
+  - En Docker usar `DB_HOST=db` (usa `backend/.env.docker`). En ejecución local usar `DB_HOST=localhost`.
 - Frontend (`frontend/.env`): `API_URL`, `FRONTEND_PORT`
 - BD (`db/.env`): `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_PORT`
 - Puertos externos (root `.env` opcional): `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`
@@ -24,6 +24,7 @@ Variables clave:
 Base de datos de pruebas (`/db`)
 - `docker compose up -d` dentro de `/db` levanta Postgres en `localhost:5432`
 - Ajusta `DB_HOST=localhost` y `DB_PORT=5432` en `backend/.env` para conectar al contenedor local.
+- En el compose principal, `db` monta `init-db.sh` para crear automáticamente `parcels`/`parcels_test` y usa `backend/.env.docker`.
 
 ## Ejecución rápida
 ```bash
