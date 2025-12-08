@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    env_file:
+      - ./.env.test
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-parcels}
+      POSTGRES_USER: ${POSTGRES_USER:-parcels}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-parcels}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db-data-test:/var/lib/postgresql/data
+volumes:
+  db-data-test:

@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    env_file:
+      - ./db/.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-parcels}
+      POSTGRES_USER: ${POSTGRES_USER:-parcels}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-parcels}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+
+volumes:
+  db-data:

@@ -1,0 +1,32 @@
+# Node
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Builds
+dist
+build
+
+# Logs
+*.log
+
+# IDE / OS
+.DS_Store
+.idea
+.vscode
+
+# Docker
+db-data
+
+# Angular
+frontend/.angular
+frontend/.cache
+
+# Nest
+backend/.nest
+
+# Env
+.env
+.env.local
