@@ -43,6 +43,100 @@ flowchart TD
   Payments --> Shipments
 ```
 
+Diagrama entidad-relación (simplificado):
+```mermaid
+erDiagram
+  USERS ||--o{ ADDRESSES : has
+  USERS ||--o{ SHIPMENTS : creates
+  USERS ||--o{ PAYMENTS : pays
+  QUOTES ||--o{ SHIPMENTS : source
+  SHIPMENTS ||--o{ SHIPMENT_STATUS_HISTORY : logs
+  SHIPMENTS ||--o{ PAYMENTS : billed
+  SHIPMENTS ||--o{ ROUTE_ASSIGNMENTS : assigned_to
+  ROUTES ||--o{ ROUTE_ASSIGNMENTS : contains
+
+  USERS {
+    uuid id PK
+    string email
+    string passwordHash
+    string role
+    string name
+    string phone
+  }
+  ADDRESSES {
+    uuid id PK
+    uuid userId FK
+    string label
+    string street
+    string city
+    string state
+    string country
+    string zip
+    float lat
+    float lng
+  }
+  QUOTES {
+    uuid id PK
+    string serviceType
+    float weightKg
+    float volumeM3
+    string originZip
+    string destinationZip
+    float price
+    int etaMinDays
+    int etaMaxDays
+    date shipDate
+  }
+  SHIPMENTS {
+    uuid id PK
+    string trackingCode
+    uuid userId FK
+    uuid quoteId FK
+    string serviceType
+    float weightKg
+    float volumeM3
+    string originAddress
+    string destinationAddress
+    string originZip
+    string destinationZip
+    date pickupDate
+    string pickupSlot
+    float priceQuote
+    float priceFinal
+    string status
+  }
+  SHIPMENT_STATUS_HISTORY {
+    uuid id PK
+    uuid shipmentId FK
+    string status
+    string note
+    string location
+  }
+  PAYMENTS {
+    uuid id PK
+    uuid shipmentId FK
+    float amount
+    string currency
+    string provider
+    string status
+    string externalRef
+  }
+  ROUTES {
+    uuid id PK
+    string name
+    string region
+    string vehicle
+    string driver
+    int capacity
+    boolean active
+  }
+  ROUTE_ASSIGNMENTS {
+    uuid id PK
+    uuid routeId FK
+    uuid shipmentId FK
+  }
+```
+
 Frontend páginas:
 ```mermaid
 flowchart TD
@@ -65,6 +159,12 @@ Servicios:
 - Postgres: localhost:5432 (USER/PASS: parcels, DB `parcels` creada por `init-db.sh`). El backend espera a DB healthy.
 
 Detener: `docker compose down` (agrega `-v` para borrar volumen `db-data`).
+
+## Makefile (atalhos)
+- `make up` / `make down` / `make clean` (down -v)
+- `make build` (build de imágenes)
+- `make logs` (todos) o `backend-logs` / `frontend-logs` / `db-logs`
+- `make ps` (estado de contenedores)
 
 ## Desarrollo local (sin Docker)
 Backend:
