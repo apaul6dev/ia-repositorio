@@ -28,5 +28,4 @@ frontend/.cache
 backend/.nest
 
 # Env
-.env
 .env.local
