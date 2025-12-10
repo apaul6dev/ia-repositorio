@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../services/api.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   standalone: true,
@@ -10,8 +11,8 @@ import { ApiService } from '../services/api.service';
   template: `
     <div class="card">
       <h2>Crear reserva de envío</h2>
-      <div class="card" style="margin-bottom: 12px;">
-        <h3>Buscar cliente (opcional)</h3>
+      <div class="card" style="margin-bottom: 12px;" *ngIf="!lockUser">
+        <h3>Buscar cliente</h3>
         <label>Nombre o email</label>
         <input [(ngModel)]="searchTerm" name="searchTerm" placeholder="Buscar..." />
         <button type="button" (click)="searchUsers()" [disabled]="searching || !searchTerm || searchTerm.length < 2">
@@ -19,13 +20,11 @@ import { ApiService } from '../services/api.service';
         </button>
         <div *ngIf="searchResults.length">
           <p>Selecciona un cliente:</p>
-          <ul>
-            <li *ngFor="let u of searchResults">
-              <button type="button" (click)="selectUser(u)">
-                {{ u.email }} <span *ngIf="u.name">- {{ u.name }}</span>
-              </button>
-            </li>
-          </ul>
+          <select [(ngModel)]="selectedUserId" (change)="selectUserById()">
+            <option *ngFor="let u of searchResults" [value]="u.id">
+              {{ u.email }} <span *ngIf="u.name">- {{ u.name }}</span>
+            </option>
+          </select>
         </div>
         <div *ngIf="form.userId">
           Cliente seleccionado: <strong>{{ selectedUserLabel }}</strong>
@@ -34,7 +33,12 @@ import { ApiService } from '../services/api.service';
       </div>
       <form (ngSubmit)="onSubmit()">
         <label>Nombre cliente</label>
-        <input name="userId" [(ngModel)]="form.userId" placeholder="Opcional: ID usuario" />
+        <input
+          name="userId"
+          [(ngModel)]="form.userId"
+          placeholder="Opcional: ID usuario"
+          [readonly]="lockUser"
+        />
 
         <label>Cotización ID (opcional)</label>
         <input name="quoteId" [(ngModel)]="form.quoteId" />
@@ -88,7 +92,7 @@ import { ApiService } from '../services/api.service';
     </div>
   `,
 })
-export class ReserveComponent {
+export class ReserveComponent implements OnInit {
   form: any = {
     userId: '',
     quoteId: '',
@@ -111,8 +115,22 @@ export class ReserveComponent {
   searchResults: any[] = [];
   searching = false;
   selectedUserLabel = '';
+  selectedUserId = '';
+  lockUser = false;
 
-  constructor(private readonly api: ApiService) {}
+  constructor(
+    private readonly api: ApiService,
+    private readonly auth: AuthService,
+  ) {}
+
+  ngOnInit() {
+    if (this.auth.user) {
+      this.form.userId = this.auth.user.id;
+      this.selectedUserLabel =
+        this.auth.user.email + (this.auth.user.name ? ` - ${this.auth.user.name}` : '');
+      this.lockUser = this.auth.user.role === 'client';
+    }
+  }
 
   onSubmit() {
     this.loading = true;
@@ -144,12 +162,23 @@ export class ReserveComponent {
   }
 
   selectUser(user: any) {
+    if (this.lockUser) return;
     this.form.userId = user.id;
+    this.selectedUserId = user.id;
     this.selectedUserLabel = user.email + (user.name ? ` - ${user.name}` : '');
   }
 
+  selectUserById() {
+    const user = this.searchResults.find((u) => u.id === this.selectedUserId);
+    if (user) {
+      this.selectUser(user);
+    }
+  }
+
   clearUser() {
+    if (this.lockUser) return;
     this.form.userId = '';
+    this.selectedUserId = '';
     this.selectedUserLabel = '';
   }
 }

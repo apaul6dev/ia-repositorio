@@ -69,16 +69,18 @@ export class UsersService {
     return true;
   }
 
-  async searchClients(term?: string) {
+  async searchUsers(term?: string, role?: string) {
     if (!term || term.trim().length < 2) return [];
     const t = `%${term.trim()}%`;
-    return this.usersRepo
+    const qb = this.usersRepo
       .createQueryBuilder('user')
-      .select(['user.id', 'user.email', 'user.name', 'user.phone'])
-      .where('user.role = :role', { role: 'client' })
-      .andWhere('(user.email ILIKE :t OR user.name ILIKE :t)', { t })
+      .select(['user.id', 'user.email', 'user.name', 'user.phone', 'user.role'])
+      .where('(user.email ILIKE :t OR user.name ILIKE :t)', { t })
       .orderBy('user.email', 'ASC')
-      .limit(10)
-      .getMany();
+      .limit(10);
+    if (role) {
+      qb.andWhere('user.role = :role', { role });
+    }
+    return qb.getMany();
   }
 }

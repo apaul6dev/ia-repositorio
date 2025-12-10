@@ -47,6 +47,13 @@ export class Shipment {
   @Column({ nullable: true })
   quoteId?: string;
 
+  @ManyToOne(() => User, { nullable: true, eager: true })
+  @JoinColumn({ name: 'operatorId' })
+  operator?: User;
+
+  @Column({ nullable: true })
+  operatorId?: string;
+
   @Column({ type: 'varchar' })
   serviceType!: ServiceType;
 

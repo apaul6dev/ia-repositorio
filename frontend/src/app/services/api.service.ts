@@ -27,6 +27,12 @@ export class ApiService {
     });
   }
 
+  searchOperators(term: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/users/search`, {
+      params: { q: term, role: 'operator' },
+    });
+  }
+
   quote(payload: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/quotes`, payload);
   }
@@ -45,5 +51,9 @@ export class ApiService {
 
   updateStatus(id: string, payload: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/ops/shipments/${id}/status`, payload);
+  }
+
+  post(path: string, payload: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}${path.startsWith('/') ? '' : '/'}${path}`, payload);
   }
 }

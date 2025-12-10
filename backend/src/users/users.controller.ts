@@ -65,7 +65,7 @@ export class UsersController {
 
   @UseGuards(JwtOptionalGuard)
   @Get('search')
-  search(@Query('q') q: string) {
-    return this.usersService.searchClients(q);
+  search(@Query('q') q: string, @Query('role') role?: string) {
+    return this.usersService.searchUsers(q, role);
   }
 }

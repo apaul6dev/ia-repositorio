@@ -10,6 +10,7 @@ import { Route } from '../entities/route.entity';
 import { RouteAssignment } from '../entities/route-assignment.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuthModule } from '../auth/auth.module';
     ]),
     NotificationsModule,
     AuthModule,
+    UsersModule,
   ],
   providers: [ShipmentsService],
   controllers: [ShipmentsController, OpsController],

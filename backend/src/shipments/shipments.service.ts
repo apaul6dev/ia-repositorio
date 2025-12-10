@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Quote } from '../entities/quote.entity';
@@ -9,6 +9,7 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Route } from '../entities/route.entity';
 import { RouteAssignment } from '../entities/route-assignment.entity';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class ShipmentsService {
@@ -143,6 +144,24 @@ export class ShipmentsService {
 
   async listAssignments(routeId: string) {
     return this.assignmentsRepo.find({ where: { routeId } });
+  }
+
+  async assignOperator(shipmentId: string, operatorId: string) {
+    const shipment = await this.shipmentsRepo.findOne({ where: { id: shipmentId } });
+    if (!shipment) throw new NotFoundException('Shipment not found');
+    shipment.operatorId = operatorId;
+    return this.shipmentsRepo.save(shipment);
+  }
+
+  async updateStatusAsUser(id: string, dto: UpdateStatusDto, user: User) {
+    const shipment = await this.shipmentsRepo.findOne({ where: { id } });
+    if (!shipment) {
+      throw new NotFoundException('Shipment not found');
+    }
+    if (user.role === 'operator' && shipment.operatorId && shipment.operatorId !== user.id) {
+      throw new ForbiddenException('Shipment not assigned to operator');
+    }
+    return this.addStatus(id, { ...dto, changedBy: user.email || user.id });
   }
 
   private generateTrackingCode(): string {

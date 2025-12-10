@@ -22,6 +22,15 @@ import { AuthService } from '../services/auth.service';
         <div><strong>{{ s.trackingCode }}</strong> - {{ s.status }}</div>
         <div>Origen: {{ s.originZip }} → Destino: {{ s.destinationZip }}</div>
         <div>Servicio: {{ s.serviceType }} | Peso: {{ s.weightKg }} kg</div>
+        <div>Asignado a: {{ s.operator?.email || s.operatorId || 'N/D' }}</div>
+        <div *ngIf="auth.user?.role === 'admin'" class="card" style="margin-top:8px;">
+          <label>Asignar operador (id)</label>
+          <input [(ngModel)]="operatorAssign[s.id]" placeholder="UUID operador" />
+          <button (click)="assignOperator(s.id)">Asignar</button>
+        </div>
+        <div *ngIf="auth.user?.role === 'operator'" class="card" style="margin-top:8px;">
+          <button (click)="assignMe(s.id)">Asignarme este envío</button>
+        </div>
         <label>Nuevo estado</label>
         <select [(ngModel)]="statusForm.status">
           <option *ngFor="let st of statuses" [value]="st">{{ st }}</option>
@@ -52,6 +61,7 @@ export class AdminDashboardComponent implements OnInit {
     note: '',
     location: '',
   };
+  operatorAssign: Record<string, string> = {};
 
   constructor(
     private readonly api: ApiService,
@@ -70,5 +80,22 @@ export class AdminDashboardComponent implements OnInit {
     this.api.updateStatus(id, this.statusForm).subscribe(() => {
       this.loadShipments();
     });
+  }
+
+  assignOperator(id: string) {
+    const operatorId = this.operatorAssign[id];
+    if (!operatorId) {
+      alert('Ingresa un ID de operador');
+      return;
+    }
+    this.api
+      .post(`/ops/shipments/${id}/assign-operator`, { operatorId })
+      .subscribe(() => this.loadShipments());
+  }
+
+  assignMe(id: string) {
+    this.api
+      .post(`/ops/shipments/${id}/assign-operator`, { operatorId: this.auth.user?.id })
+      .subscribe(() => this.loadShipments());
   }
 }

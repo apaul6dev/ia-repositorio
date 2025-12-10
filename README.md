@@ -191,11 +191,18 @@ Base: `http://localhost:3000`
 - Envío/reserva: `POST /shipments` body `{ originAddress, destinationAddress, originZip, destinationZip, weightKg, volumeM3, serviceType, pickupDate, pickupSlot, priceQuote, priceFinal, quoteId?, userId? }`
 - Listar envíos: `GET /shipments` filtros `me=true` (token), `status`, `routeId`, `dateFrom`, `dateTo`
 - Detalle: `GET /shipments/{id}`; Tracking: `GET /shipments/{id}/tracking`
-- Operador: `GET /ops/shipments` (filtros), `POST /ops/shipments/{id}/status`
+- Operador/Admin: `GET /ops/shipments` (filtros), `POST /ops/shipments/{id}/status`
+- Asignar operador: `POST /ops/shipments/{id}/assign-operator` body `{ operatorId }` (admin puede asignar cualquiera; operador puede autoasignarse)
 - Rutas: `POST /ops/routes`, `POST /ops/routes/{routeId}/assign`, `GET /ops/routes/{routeId}/assignments`
 - Pagos: `POST /payments/init`, `POST /payments/webhook`, `GET /payments/{id}`
 
 Tokens: login/registro devuelven `accessToken` (Bearer) y `refreshToken`.
+
+Datos seed (migración)
+- 5 usuarios clientes `user1@demo.com` a `user5@demo.com` con contraseña `password123`.
+- 5 envíos de ejemplo con tracking `PKG-SEED-00X` asociados a esos usuarios.
+- Usuarios operativos: `operator@demo.com` (rol operador) y `admin@demo.com` (rol admin), contraseña `password123`.
+- Historial de envíos seed: estados precargados en `shipment_status_history` (creado, en tránsito, entregado, etc. según cada tracking).
 
 ## Frontend (Angular)
 - Páginas: Inicio, Cotizar, Reservar (incluye buscador de clientes), Tracking, Operador, Login/Registro.
