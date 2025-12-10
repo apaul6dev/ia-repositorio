@@ -19,6 +19,7 @@ export class QuotesService {
       volumeM3: dto.volumeM3,
       originZip: dto.originZip,
       destinationZip: dto.destinationZip,
+      userId: dto.userId,
       price,
       etaMinDays: eta.min,
       etaMaxDays: eta.max,

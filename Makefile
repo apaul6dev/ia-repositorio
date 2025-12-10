@@ -29,3 +29,9 @@ ps:
 
 clean:
 	$(DC) down -v
+
+purge:
+	$(DC) down -v --rmi all --remove-orphans
+	docker system prune -a -f
+	docker volume prune -f
+	docker builder prune -a -f

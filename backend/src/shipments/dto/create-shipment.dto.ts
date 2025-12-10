@@ -12,9 +12,8 @@ export class CreateShipmentDto {
   @IsString()
   userId?: string;
 
-  @IsOptional()
   @IsString()
-  quoteId?: string;
+  quoteId!: string;
 
   @IsEnum(['express', 'standard', 'economic'], {
     message: 'serviceType must be express | standard | economic',

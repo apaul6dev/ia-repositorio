@@ -45,6 +45,14 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/shipments`);
   }
 
+  listMyShipments(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/shipments`, { params: { me: 'true' } });
+  }
+
+  listOpsShipments(params?: any): Observable<any> {
+    return this.http.get(`${this.baseUrl}/ops/shipments`, { params });
+  }
+
   tracking(id: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/shipments/${id}/tracking`);
   }

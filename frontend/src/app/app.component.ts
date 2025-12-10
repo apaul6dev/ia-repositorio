@@ -12,17 +12,21 @@ import { AuthService } from './services/auth.service';
       <div class="container">
         <h1>Sistema de Transporte</h1>
         <nav>
-          <a routerLink="/">Inicio</a>
-          <a routerLink="/cotizar">Cotizar</a>
-          <a routerLink="/reservar">Reservar</a>
-          <a routerLink="/tracking">Tracking</a>
-          <a routerLink="/admin">Operador</a>
-          <a *ngIf="!auth.user" routerLink="/login">Login</a>
-          <a *ngIf="!auth.user" routerLink="/registro">Registro</a>
-          <span *ngIf="auth.user" style="margin-left:12px;">
-            {{ auth.user.email }} ({{ auth.user.role }})
-            <button style="margin-left:8px;" (click)="logout()">Salir</button>
-          </span>
+          <ng-container *ngIf="auth.user; else guestLinks">
+            <a *ngIf="auth.user.role !== 'client'" routerLink="/">Inicio</a>
+            <a routerLink="/cotizar">Cotizar</a>
+            <a routerLink="/reservar">Reservar</a>
+            <a routerLink="/tracking">Tracking</a>
+            <a *ngIf="auth.user.role !== 'client'" routerLink="/admin">Operador</a>
+            <span style="margin-left:12px;">
+              {{ auth.user.email }} ({{ auth.user.role }})
+              <button style="margin-left:8px;" (click)="logout()">Salir</button>
+            </span>
+          </ng-container>
+          <ng-template #guestLinks>
+            <a routerLink="/login">Login</a>
+            <a routerLink="/registro">Registro</a>
+          </ng-template>
         </nav>
       </div>
     </header>

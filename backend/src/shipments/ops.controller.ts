@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards, SetMetadata } from '@nestjs/common';
 import { ShipmentsService } from './shipments.service';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ReqUser } from '../auth/user.decorator';
 import { UsersService } from '../users/users.service';
 import { ForbiddenException } from '@nestjs/common';
+import { RolesGuard } from '../auth/roles.guard';
 
 @UseGuards(JwtAuthGuard)
 @Controller('ops/shipments')
@@ -20,12 +21,17 @@ export class OpsController {
     @Query('routeId') routeId?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
+    @Query('operatorId') operatorId?: string,
+    @Query('meOperator') meOperator?: string,
+    @ReqUser() user?: any,
   ) {
+    const opId = meOperator === 'true' && user?.sub ? user.sub : operatorId;
     return this.shipmentsService.findAll({
       status: status as any,
       routeId,
       dateFrom,
       dateTo,
+      operatorId: opId,
     });
   }
 
@@ -37,7 +43,9 @@ export class OpsController {
     });
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post(':id/assign-operator')
+  @SetMetadata('roles', ['admin', 'operator'])
   async assignOperator(
     @Param('id') id: string,
     @Body('operatorId') operatorId: string,
@@ -55,7 +63,8 @@ export class OpsController {
     }
 
     if (!targetOperatorId) {
-      throw new ForbiddenException('operatorId is required');
+      // unassign
+      return this.shipmentsService.assignOperator(id, null);
     }
 
     return this.shipmentsService.assignOperator(id, targetOperatorId);

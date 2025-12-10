@@ -25,11 +25,12 @@ Claves por capa:
 ## Arquitectura (Mermaid)
 ```mermaid
 flowchart LR
-  A[Angular SPA] -- REST --> B[NestJS API]
+  A[Angular SPA\n(guards + interceptors)] -- REST --> B[NestJS API]
   B -- TypeORM --> C[(PostgreSQL)]
   B -- JWT --> B
   B -- Webhook --> D[Pagos mock]
   B -- Notif stub --> E[Notificaciones]
+  B <-- asigna/actualiza --> O[Operadores/Admin]
 ```
 
 Backend módulos:
@@ -37,9 +38,12 @@ Backend módulos:
 flowchart TD
   Auth --> Users
   Users --> Addresses
+  Users --> Quotes
   Quotes --> Shipments
   Shipments --> Status[Status History]
+  Shipments --> Operator[Operator Assignment]
   Ops[Ops/Rutas] --> Shipments
+  Routes --> Shipments
   Payments --> Shipments
 ```
 
@@ -47,8 +51,10 @@ Diagrama entidad-relación (simplificado):
 ```mermaid
 erDiagram
   USERS ||--o{ ADDRESSES : has
+  USERS ||--o{ QUOTES : requests
   USERS ||--o{ SHIPMENTS : creates
   USERS ||--o{ PAYMENTS : pays
+  USERS ||--o{ SHIPMENTS : assigned_as_operator
   QUOTES ||--o{ SHIPMENTS : source
   SHIPMENTS ||--o{ SHIPMENT_STATUS_HISTORY : logs
   SHIPMENTS ||--o{ PAYMENTS : billed
@@ -77,6 +83,7 @@ erDiagram
   }
   QUOTES {
     uuid id PK
+    uuid userId FK
     string serviceType
     float weightKg
     float volumeM3
@@ -92,6 +99,7 @@ erDiagram
     string trackingCode
     uuid userId FK
     uuid quoteId FK
+    uuid operatorId FK
     string serviceType
     float weightKg
     float volumeM3
@@ -186,9 +194,9 @@ Ajusta `frontend/.env` (API_URL) si el backend corre en otro host/puerto.
 Base: `http://localhost:3000`
 - Auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`
 - Perfil: `GET /users/me` (Bearer), direcciones CRUD `/users/me/addresses`
-- Búsqueda de clientes: `GET /users/search?q=term`
-- Cotizar: `POST /quotes` body `{ originZip, destinationZip, weightKg, volumeM3, serviceType, shipDate? }`
-- Envío/reserva: `POST /shipments` body `{ originAddress, destinationAddress, originZip, destinationZip, weightKg, volumeM3, serviceType, pickupDate, pickupSlot, priceQuote, priceFinal, quoteId?, userId? }`
+- Búsqueda de usuarios: `GET /users/search?q=term&role=client|operator`
+- Cotizar: `POST /quotes` body `{ originZip, destinationZip, weightKg, volumeM3, serviceType, shipDate?, userId? }` (si hay token, se asocia al usuario)
+- Envío/reserva: `POST /shipments` body `{ quoteId, originAddress, destinationAddress, originZip, destinationZip, weightKg?, volumeM3?, serviceType?, pickupDate, pickupSlot, priceQuote?, priceFinal?, userId? }` (requiere `quoteId`; si la quote tiene dueño, se fuerza ese `userId`)
 - Listar envíos: `GET /shipments` filtros `me=true` (token), `status`, `routeId`, `dateFrom`, `dateTo`
 - Detalle: `GET /shipments/{id}`; Tracking: `GET /shipments/{id}/tracking`
 - Operador/Admin: `GET /ops/shipments` (filtros), `POST /ops/shipments/{id}/status`
@@ -197,6 +205,12 @@ Base: `http://localhost:3000`
 - Pagos: `POST /payments/init`, `POST /payments/webhook`, `GET /payments/{id}`
 
 Tokens: login/registro devuelven `accessToken` (Bearer) y `refreshToken`.
+
+Flujo core (cotización → reserva → tracking → asignación):
+1) `POST /quotes` genera una cotización con precio/ETA.
+2) `POST /shipments` requiere `quoteId` y datos de direcciones/ventana; genera tracking, fuerza el `userId` de la cotización.
+3) `GET /shipments/{id o trackingCode}/tracking` muestra historial; operadores/admin actualizan estado.
+4) `POST /ops/shipments/{id}/assign-operator` asigna operador (admin) o autoasigna (operador); enviar `operatorId=null` desasigna.
 
 Datos seed (migración)
 - 5 usuarios clientes `user1@demo.com` a `user5@demo.com` con contraseña `password123`.
@@ -207,8 +221,8 @@ Datos seed (migración)
 - Direcciones seed: casa y oficina para cada usuario demo.
 
 ## Frontend (Angular)
-- Páginas: Inicio, Cotizar, Reservar (buscador de clientes; clientes quedan bloqueados a su propio usuario), Tracking, Operador (solo roles operator/admin), Login/Registro.
-- Estado de sesión con `AuthService` y `AuthInterceptor` (JWT); `LoggingInterceptor` para trazas en dev; guardas protegen todas las vistas.
+- Páginas: Cotizar, Reservar (buscador de clientes; clientes bloqueados a su usuario), Tracking (incluye lista de “Mis envíos” para usuarios logueados), Operador (tabla de envíos con detalle y asignación de operador/autoasignación), Login/Registro; Inicio/Operador solo visibles para roles operator/admin.
+- Estado de sesión con `AuthService` y `AuthInterceptor` (JWT, manejo de 401/403); `LoggingInterceptor` en dev; guardas protegen todas las vistas.
 
 ## Estructura
 - `backend/`: NestJS + TypeORM, migraciones en `src/migrations`, módulos Auth, Users, Quotes, Shipments/Ops, Routes, Payments, Notifications.

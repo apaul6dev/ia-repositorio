@@ -124,15 +124,19 @@ export class ReserveComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    if (this.auth.user) {
+    if (this.auth.user && this.auth.user.role === 'client') {
       this.form.userId = this.auth.user.id;
       this.selectedUserLabel =
         this.auth.user.email + (this.auth.user.name ? ` - ${this.auth.user.name}` : '');
-      this.lockUser = this.auth.user.role === 'client';
+      this.lockUser = true;
     }
   }
 
   onSubmit() {
+    if (!this.form.quoteId) {
+      alert('Debes indicar una cotización (quoteId) antes de reservar');
+      return;
+    }
     this.loading = true;
     this.api.createShipment(this.form).subscribe({
       next: (data) => {

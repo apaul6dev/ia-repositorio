@@ -52,7 +52,7 @@ export class Shipment {
   operator?: User;
 
   @Column({ nullable: true })
-  operatorId?: string;
+  operatorId?: string | null;
 
   @Column({ type: 'varchar' })
   serviceType!: ServiceType;

@@ -11,6 +11,7 @@ import { RouteAssignment } from '../entities/route-assignment.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { User } from '../entities/user.entity';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UsersModule } from '../users/users.module';
       Quote,
       Route,
       RouteAssignment,
+      User,
     ]),
     NotificationsModule,
     AuthModule,

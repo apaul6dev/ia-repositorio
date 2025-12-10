@@ -3,7 +3,10 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from './user.entity';
 
 export type ServiceType = 'express' | 'standard' | 'economic';
 
@@ -44,4 +47,11 @@ export class Quote {
 
   @Column({ type: 'timestamptz', nullable: true })
   expiresAt?: Date;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'userId' })
+  user?: User;
+
+  @Column({ nullable: true })
+  userId?: string;
 }

@@ -14,23 +14,55 @@ import { AuthService } from '../services/auth.service';
       <div style="margin-bottom:8px;">
         <button (click)="loadShipments()">Actualizar lista</button>
         <span *ngIf="!auth.user" style="color:#b91c1c; margin-left:8px;">
-          Se recomienda iniciar sesión como operador/admin para gestionar estados.
+          Inicia sesión como operador/admin para gestionar estados.
         </span>
       </div>
+
       <div *ngIf="shipments.length === 0">No hay envíos creados.</div>
-      <div class="card" *ngFor="let s of shipments">
-        <div><strong>{{ s.trackingCode }}</strong> - {{ s.status }}</div>
-        <div>Origen: {{ s.originZip }} → Destino: {{ s.destinationZip }}</div>
-        <div>Servicio: {{ s.serviceType }} | Peso: {{ s.weightKg }} kg</div>
-        <div>Asignado a: {{ s.operator?.email || s.operatorId || 'N/D' }}</div>
+
+      <table *ngIf="shipments.length" style="width:100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th>Tracking</th>
+            <th>Estado</th>
+            <th>Origen</th>
+            <th>Destino</th>
+            <th>Operador</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let s of shipments"
+            (click)="selectShipment(s)"
+            [style.cursor]="'pointer'"
+            [style.background]="selected?.id === s.id ? '#eef2ff' : 'transparent'"
+          >
+            <td>{{ s.trackingCode }}</td>
+            <td>{{ s.status }}</td>
+            <td>{{ s.originZip }}</td>
+            <td>{{ s.destinationZip }}</td>
+            <td>{{ s.operator?.email || s.operatorId || 'N/D' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div *ngIf="selected" class="card" style="margin-top:12px;">
+        <h3>Detalle envío</h3>
+        <p><strong>Tracking:</strong> {{ selected.trackingCode }}</p>
+        <p><strong>Estado:</strong> {{ selected.status }}</p>
+        <p><strong>Servicio:</strong> {{ selected.serviceType }} | Peso {{ selected.weightKg }} kg</p>
+        <p><strong>Origen/Destino:</strong> {{ selected.originZip }} → {{ selected.destinationZip }}</p>
+        <p><strong>Asignado a:</strong> {{ selected.operator?.email || selected.operatorId || 'N/D' }}</p>
+
         <div *ngIf="auth.user?.role === 'admin'" class="card" style="margin-top:8px;">
           <label>Asignar operador (id)</label>
-          <input [(ngModel)]="operatorAssign[s.id]" placeholder="UUID operador" />
-          <button (click)="assignOperator(s.id)">Asignar</button>
+          <input [(ngModel)]="operatorAssign[selected.id]" placeholder="UUID operador" />
+          <button (click)="assignOperator(selected.id)">Asignar</button>
         </div>
         <div *ngIf="auth.user?.role === 'operator'" class="card" style="margin-top:8px;">
-          <button (click)="assignMe(s.id)">Asignarme este envío</button>
+          <button (click)="assignMe(selected.id)">Asignarme este envío</button>
         </div>
+
         <label>Nuevo estado</label>
         <select [(ngModel)]="statusForm.status">
           <option *ngFor="let st of statuses" [value]="st">{{ st }}</option>
@@ -39,13 +71,14 @@ import { AuthService } from '../services/auth.service';
         <input [(ngModel)]="statusForm.note" />
         <label>Ubicación</label>
         <input [(ngModel)]="statusForm.location" />
-        <button (click)="updateStatus(s.id)">Guardar estado</button>
+        <button (click)="updateStatus(selected.id)">Guardar estado</button>
       </div>
     </div>
   `,
 })
 export class AdminDashboardComponent implements OnInit {
   shipments: any[] = [];
+  selected: any = null;
   statuses = [
     'created',
     'pickup_scheduled',
@@ -73,7 +106,21 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   loadShipments() {
-    this.api.listShipments().subscribe((data) => (this.shipments = data));
+    // Operadores ven todos para poder autoasignarse
+    const params = {};
+    this.api.listOpsShipments(params).subscribe((data) => {
+      this.shipments = data || [];
+      if (this.shipments.length) {
+        const stillSelected = this.shipments.find((s) => s.id === this.selected?.id);
+        this.selected = stillSelected || this.shipments[0];
+      } else {
+        this.selected = null;
+      }
+    });
+  }
+
+  selectShipment(s: any) {
+    this.selected = s;
   }
 
   updateStatus(id: string) {
@@ -84,12 +131,8 @@ export class AdminDashboardComponent implements OnInit {
 
   assignOperator(id: string) {
     const operatorId = this.operatorAssign[id];
-    if (!operatorId) {
-      alert('Ingresa un ID de operador');
-      return;
-    }
     this.api
-      .post(`/ops/shipments/${id}/assign-operator`, { operatorId })
+      .post(`/ops/shipments/${id}/assign-operator`, { operatorId: operatorId || null })
       .subscribe(() => this.loadShipments());
   }
 

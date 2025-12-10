@@ -24,27 +24,41 @@ export class ShipmentsService {
     private readonly routesRepo: Repository<Route>,
     @InjectRepository(RouteAssignment)
     private readonly assignmentsRepo: Repository<RouteAssignment>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreateShipmentDto): Promise<Shipment> {
-    const quote = dto.quoteId ? await this.quotesRepo.findOne({ where: { id: dto.quoteId } }) : null;
+    if (!dto.quoteId) {
+      throw new Error('quoteId is required to create a shipment');
+    }
+    const quote = await this.quotesRepo.findOne({ where: { id: dto.quoteId } });
+    if (!quote) {
+      throw new NotFoundException('Quote not found');
+    }
+    if (quote.userId) {
+      if (dto.userId && dto.userId !== quote.userId) {
+        throw new ForbiddenException('Quote does not belong to this user');
+      }
+      dto.userId = quote.userId;
+    }
 
     const shipment = this.shipmentsRepo.create({
       trackingCode: this.generateTrackingCode(),
       user: dto.userId ? ({ id: dto.userId } as any) : undefined,
-      quote: quote || (dto.quoteId ? ({ id: dto.quoteId } as any) : undefined),
-      serviceType: dto.serviceType,
-      weightKg: dto.weightKg,
-      volumeM3: dto.volumeM3,
+      quote,
+      serviceType: dto.serviceType || quote.serviceType,
+      weightKg: dto.weightKg || quote.weightKg,
+      volumeM3: dto.volumeM3 || quote.volumeM3,
       originAddress: dto.originAddress,
       destinationAddress: dto.destinationAddress,
       originZip: dto.originZip,
       destinationZip: dto.destinationZip,
       pickupDate: dto.pickupDate,
       pickupSlot: dto.pickupSlot,
-      priceQuote: dto.priceQuote,
-      priceFinal: dto.priceFinal,
+      priceQuote: dto.priceQuote ?? quote.price,
+      priceFinal: dto.priceFinal ?? quote.price,
       status: 'created',
     });
 
@@ -63,6 +77,7 @@ export class ShipmentsService {
     routeId?: string;
     dateFrom?: string;
     dateTo?: string;
+    operatorId?: string;
   }) {
     const qb = this.shipmentsRepo
       .createQueryBuilder('shipment')
@@ -79,6 +94,9 @@ export class ShipmentsService {
         to: filters.dateTo,
       });
     }
+    if (filters?.operatorId) {
+      qb.andWhere('shipment.operatorId = :operatorId', { operatorId: filters.operatorId });
+    }
     if (filters?.routeId) {
       qb.leftJoin('shipment.assignments', 'assignments');
       qb.andWhere('assignments.routeId = :routeId', { routeId: filters.routeId });
@@ -87,7 +105,9 @@ export class ShipmentsService {
   }
 
   async findOne(id: string) {
-    const shipment = await this.shipmentsRepo.findOne({ where: { id } });
+    const shipment =
+      (await this.shipmentsRepo.findOne({ where: { id } })) ||
+      (await this.shipmentsRepo.findOne({ where: { trackingCode: id } }));
     if (!shipment) {
       throw new NotFoundException('Shipment not found');
     }
@@ -95,11 +115,17 @@ export class ShipmentsService {
   }
 
   async tracking(id: string) {
-    const shipment = await this.shipmentsRepo.findOne({
-      where: { id },
-      relations: ['statusHistory'],
-      order: { statusHistory: { changedAt: 'ASC' } },
-    });
+    const shipment =
+      (await this.shipmentsRepo.findOne({
+        where: { id },
+        relations: ['statusHistory'],
+        order: { statusHistory: { changedAt: 'ASC' } },
+      })) ||
+      (await this.shipmentsRepo.findOne({
+        where: { trackingCode: id },
+        relations: ['statusHistory'],
+        order: { statusHistory: { changedAt: 'ASC' } },
+      }));
     if (!shipment) {
       throw new NotFoundException('Shipment not found');
     }
@@ -146,10 +172,18 @@ export class ShipmentsService {
     return this.assignmentsRepo.find({ where: { routeId } });
   }
 
-  async assignOperator(shipmentId: string, operatorId: string) {
+  async assignOperator(shipmentId: string, operatorId: string | null) {
     const shipment = await this.shipmentsRepo.findOne({ where: { id: shipmentId } });
     if (!shipment) throw new NotFoundException('Shipment not found');
-    shipment.operatorId = operatorId;
+    if (operatorId) {
+      const operator = await this.usersRepo.findOne({ where: { id: operatorId } });
+      if (!operator) {
+        throw new NotFoundException('Operator user not found');
+      }
+      shipment.operatorId = operator.id;
+    } else {
+      shipment.operatorId = null;
+    }
     return this.shipmentsRepo.save(shipment);
   }
 
