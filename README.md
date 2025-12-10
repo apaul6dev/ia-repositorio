@@ -25,12 +25,12 @@ Claves por capa:
 ## Arquitectura (Mermaid)
 ```mermaid
 flowchart LR
-  A[Angular SPA\n(guards + interceptors)] -- REST --> B[NestJS API]
+  A[Angular SPA<br>(guards + interceptors)] -- REST --> B[NestJS API]
   B -- TypeORM --> C[(PostgreSQL)]
-  B -- JWT --> B
-  B -- Webhook --> D[Pagos mock]
-  B -- Notif stub --> E[Notificaciones]
-  B <-- asigna/actualiza --> O[Operadores/Admin]
+  B -- Genera / valida JWT --> J[JWT Auth Module]
+  B -- Webhook --> D[Servicio de Pagos (mock)]
+  B -- Notificación --> E[Sistema de Notificaciones (stub)]
+  O[Operadores / Admin] -- Asigna / Actualiza --> B
 ```
 
 Backend módulos:
