@@ -156,7 +156,7 @@ docker compose up --build
 Servicios:
 - Frontend: http://localhost:4200
 - Backend: http://localhost:3000
-- Postgres: localhost:5432 (USER/PASS: parcels, DB `parcels` creada por `init-db.sh`). El backend espera a DB healthy.
+- Postgres: localhost:5432 (USER/PASS: parcels, DB `parcels` creada por `init-db.sql`). El backend espera a DB healthy.
 
 Detener: `docker compose down` (agrega `-v` para borrar volumen `db-data`).
 
@@ -204,7 +204,7 @@ Tokens: login/registro devuelven `accessToken` (Bearer) y `refreshToken`.
 ## Estructura
 - `backend/`: NestJS + TypeORM, migraciones en `src/migrations`, módulos Auth, Users, Quotes, Shipments/Ops, Routes, Payments, Notifications.
 - `frontend/`: Angular standalone components en `src/app/pages`, servicios en `src/app/services`.
-- `db/`: compose de Postgres con `init-db.sh` que crea `parcels` y `parcels_test`.
+- `db/`: compose de Postgres con `init-db.sql` que crea `parcels` y `parcels_test`.
 - `docker-compose.yml`: orquestación principal (db/backend/frontend).
 
 ## Notas
