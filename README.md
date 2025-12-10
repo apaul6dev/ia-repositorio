@@ -203,10 +203,12 @@ Datos seed (migración)
 - 5 envíos de ejemplo con tracking `PKG-SEED-00X` asociados a esos usuarios.
 - Usuarios operativos: `operator@demo.com` (rol operador) y `admin@demo.com` (rol admin), contraseña `password123`.
 - Historial de envíos seed: estados precargados en `shipment_status_history` (creado, en tránsito, entregado, etc. según cada tracking).
+- Cotizaciones seed: 5 cotizaciones express/standard/economic demo.
+- Direcciones seed: casa y oficina para cada usuario demo.
 
 ## Frontend (Angular)
-- Páginas: Inicio, Cotizar, Reservar (incluye buscador de clientes), Tracking, Operador, Login/Registro.
-- Estado de sesión con `AuthService` y `AuthInterceptor` (JWT); `LoggingInterceptor` para trazas en dev.
+- Páginas: Inicio, Cotizar, Reservar (buscador de clientes; clientes quedan bloqueados a su propio usuario), Tracking, Operador (solo roles operator/admin), Login/Registro.
+- Estado de sesión con `AuthService` y `AuthInterceptor` (JWT); `LoggingInterceptor` para trazas en dev; guardas protegen todas las vistas.
 
 ## Estructura
 - `backend/`: NestJS + TypeORM, migraciones en `src/migrations`, módulos Auth, Users, Quotes, Shipments/Ops, Routes, Payments, Notifications.
