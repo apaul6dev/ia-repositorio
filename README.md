@@ -212,6 +212,119 @@ Flujo core (cotización → reserva → tracking → asignación):
 3) `GET /shipments/{id o trackingCode}/tracking` muestra historial; operadores/admin actualizan estado.
 4) `POST /ops/shipments/{id}/assign-operator` asigna operador (admin) o autoasigna (operador); enviar `operatorId=null` desasigna.
 
+## Diagramas de secuencia de procesos
+Los diagramas usan los endpoints REST definidos arriba y los módulos indicados en la arquitectura.
+
+### Autenticación (registro, login y refresh)
+```mermaid
+sequenceDiagram
+  actor Cliente
+  participant Frontend
+  participant API as API NestJS (Auth)
+  participant DB as DB (Postgres)
+
+  Cliente->>Frontend: Completa formulario de registro/login
+  Frontend->>API: POST /auth/register | /auth/login (credenciales)
+  API->>DB: Crea o valida usuario
+  DB-->>API: Usuario válido
+  API->>API: Genera accessToken + refreshToken
+  API-->>Frontend: Tokens y perfil
+  Frontend->>API: POST /auth/refresh (refreshToken)
+  API->>API: Valida refreshToken
+  API-->>Frontend: accessToken renovado
+```
+
+### Cotización y creación de envío
+```mermaid
+sequenceDiagram
+  actor Cliente
+  participant Frontend
+  participant API as API NestJS (Quotes/Shipments)
+  participant DB as DB (Postgres)
+
+  Cliente->>Frontend: Solicita cotización
+  Frontend->>API: POST /quotes {origen, destino, peso, servicio}
+  API->>DB: Calcula y guarda cotización
+  DB-->>API: Cotización con precio y ETA
+  API-->>Frontend: Respuesta de cotización
+  Cliente->>Frontend: Confirma reserva (direcciones, ventana de retiro)
+  Frontend->>API: POST /shipments {quoteId, direcciones, slot}
+  API->>DB: Valida quote/usuario, crea envío y tracking
+  DB-->>API: Envío creado
+  API-->>Frontend: Detalle del envío + trackingCode
+```
+
+### Tracking y actualización de estados
+```mermaid
+sequenceDiagram
+  actor Cliente
+  actor Operador
+  participant Frontend
+  participant API as API NestJS (Shipments/Ops)
+  participant DB as DB (Postgres)
+  participant Notif as Notificaciones (stub)
+
+  Cliente->>Frontend: Consulta tracking
+  Frontend->>API: GET /shipments/{id|trackingCode}/tracking
+  API->>DB: Lee envío e historial de estados
+  DB-->>API: Historial completo
+  API-->>Frontend: Timeline de tracking
+  Operador->>Frontend: Actualiza estado operativo
+  Frontend->>API: POST /ops/shipments/{id}/status {status, note}
+  API->>DB: Inserta en historial y cambia estado actual
+  DB-->>API: Estado almacenado
+  API->>Notif: Envía notificación al cliente
+  Notif-->>API: Ack (stub)
+  API-->>Frontend: Estado nuevo confirmado
+```
+
+### Asignación de operador y rutas
+```mermaid
+sequenceDiagram
+  actor Admin
+  actor Operador
+  participant Frontend
+  participant API as API NestJS (Ops/Routes)
+  participant DB as DB (Postgres)
+
+  Admin->>Frontend: Busca envío para asignar
+  Frontend->>API: POST /ops/shipments/{id}/assign-operator {operatorId|null}
+  API->>DB: Valida rol y actualiza operatorId
+  DB-->>API: Asignación guardada
+  API-->>Frontend: Envío actualizado
+  Operador->>Frontend: Autoasigna o consulta ruta
+  Frontend->>API: POST /ops/routes/{routeId}/assign {shipmentId}
+  API->>DB: Crea ROUTE_ASSIGNMENTS para el envío
+  DB-->>API: Ruta asignada
+  API-->>Frontend: Confirmación con ruta
+```
+
+### Pago y webhook
+```mermaid
+sequenceDiagram
+  actor Cliente
+  participant Frontend
+  participant API as API NestJS (Payments)
+  participant Pago as Servicio de Pago (mock)
+  participant DB as DB (Postgres)
+  participant Notif as Notificaciones (stub)
+
+  Cliente->>Frontend: Inicia pago de envío
+  Frontend->>API: POST /payments/init {shipmentId}
+  API->>DB: Valida envío y monto
+  DB-->>API: Datos verificados
+  API->>Pago: Crea intento de cobro (mock)
+  Pago-->>API: externalRef/redirect
+  API->>DB: Guarda payment en estado pending
+  API-->>Frontend: URL/orden de pago
+  Pago-->>API: POST /payments/webhook (status)
+  API->>DB: Actualiza payment y estado del envío
+  DB-->>API: Actualización aplicada
+  API->>Notif: Notifica resultado al cliente
+  Notif-->>API: Ack (stub)
+  API-->>Pago: 200 OK
+```
+
 Datos seed (migración)
 - 5 usuarios clientes `user1@demo.com` a `user5@demo.com` con contraseña `password123`.
 - 5 envíos de ejemplo con tracking `PKG-SEED-00X` asociados a esos usuarios.
