@@ -2,6 +2,7 @@ PROJECT_NAME=parcel-stack
 DC=docker-compose
 
 .PHONY: up down build logs ps clean backend-logs frontend-logs db-logs
+.PHONY: test-backend test-frontend test
 
 up:
 	$(DC) up --build
@@ -35,3 +36,12 @@ purge:
 	docker system prune -a -f
 	docker volume prune -f
 	docker builder prune -a -f
+
+# Unit test helpers (ejecutan sin Docker)
+test-backend:
+	cd backend && npm test
+
+test-frontend:
+	cd frontend && npm test
+
+test: test-backend test-frontend

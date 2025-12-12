@@ -343,6 +343,21 @@ Datos seed (migración)
 - `db/`: compose de Postgres con `init-db.sql` que crea `parcels` y `parcels_test`.
 - `docker-compose.yml`: orquestación principal (db/backend/frontend).
 
+## Pruebas automatizadas
+### Backend (NestJS + Jest)
+- Comandos: `cd backend && npm test` (unit + e2e) o `npm run test:coverage` (reporte en `backend/coverage`).
+- Configuración: `jest.config.ts` con `ts-jest`, mapeo `src/*` y SQLite en memoria (`test/test-datasource.ts` y módulos de prueba) para no depender de Postgres; `JWT_SECRET` se inyecta en los tests.
+- Casos cubiertos:
+  - Auth (`test/auth.service.spec.ts`): registro devuelve payload saneado y tokens, rechaza email duplicado, login válido/inválido y refresh válido/inválido.
+  - Quotes (`test/quotes.service.spec.ts`): cálculo de precio por peso volumétrico y recuperación por id.
+  - Shipments (`test/shipments.service.spec.ts`): requiere quote existente y dueño correcto, genera tracking + historial inicial, agrega estados notificando, bloquea operadores no asignados, asigna/desasigna operadores.
+  - E2E API (`test/app.e2e-spec.ts`): flujo completo registro → cotizar → crear envío → tracking → asignar operador → actualizar estado, y verificación de guard JWT en rutas de operador.
+
+### Frontend (Angular + Karma/Playwright)
+- Unit tests: `cd frontend && npm test` usa Karma con `ChromeHeadless` (`karma.conf.js`), cobertura en `frontend/coverage`.
+- Casos: guard de auth e interceptor validan sesión/redirección; componentes `Quote`, `Reserve`, `Login`, `Tracking` y `AdminDashboard` validan envío de formularios, bloqueo de usuario cliente, búsqueda de usuarios, creación de reservas, consultas de tracking, actualizaciones de estado y asignaciones (admin/autoasignación).
+- E2E UI: `npm run e2e` ejecuta Playwright (`playwright.config.ts`), `E2E_BASE_URL` opcional (por defecto `http://localhost:4200`). El flujo `e2e/shipment-flow.spec.ts` maqueta las peticiones REST y recorre login → cotizar → reservar → tracking → panel operador/admin.
+
 ## Notas
 - Migraciones activadas (`migrationsRun=true`); `synchronize` desactivado.
 - Compose principal usa `backend/.env.docker` y healthcheck en DB para evitar `ECONNREFUSED`.
