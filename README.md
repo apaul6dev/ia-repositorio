@@ -342,6 +342,7 @@ Datos seed (migración)
 - `frontend/`: Angular standalone components en `src/app/pages`, servicios en `src/app/services`.
 - `db/`: compose de Postgres con `init-db.sql` que crea `parcels` y `parcels_test`.
 - `docker-compose.yml`: orquestación principal (db/backend/frontend).
+- Logging backend: servicios principales (Auth, Users, Shipments, Routes, Payments, Quotes, Notifications) usan `Logger` de Nest para registrar eventos relevantes (registro/login/refresh, creación de cotizaciones, creación/estado/asignación de envíos, rutas, pagos y notificaciones).
 
 ## Pruebas automatizadas
 ### Backend (NestJS + Jest)
@@ -355,6 +356,8 @@ Datos seed (migración)
   - Payments (`test/payments.service.spec.ts`): inicia pagos con referencias externas, fallback al precio final del envío, manejo de envíos inexistentes, webhook actualizando a `paid` y búsquedas/not found.
   - Users (`test/users.service.spec.ts`): creación con hashing y rol por defecto, búsqueda por email/id con direcciones, CRUD de direcciones y búsqueda de usuarios por término/rol con query builder mock.
   - Notifications (`test/notifications.service.spec.ts`): logging del cambio de estado de envíos.
+  - Controllers (`test/*.controller.spec.ts`): Auth, Quotes, Shipments (público y ops), Routes, Payments y Users validan mapeo de payloads, uso de `userId` desde token y reglas de asignación/filtrado básicas.
+  - Guards (`test/auth.guards.spec.ts`): JWT (requerido/opcional) verifica tokens y setea `request.user`; RolesGuard valida roles permitidos y responde con `Forbidden` cuando aplica.
   - E2E API (`test/app.e2e-spec.ts`): flujo completo registro → cotizar → crear envío → tracking → asignar operador → actualizar estado, y verificación de guard JWT en rutas de operador.
 
 ### Frontend (Angular + Karma/Playwright)
