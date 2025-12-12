@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -8,6 +8,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -16,21 +18,26 @@ export class AuthService {
   async register(dto: CreateUserDto) {
     const exists = await this.usersService.findByEmail(dto.email);
     if (exists) {
+      this.logger.warn(`Intento de registro duplicado: ${dto.email}`);
       throw new UnauthorizedException('Email already registered');
     }
     const user = await this.usersService.create(dto);
+    this.logger.log(`Usuario registrado ${user.email} (${user.role})`);
     return { user: this.sanitize(user), ...this.generateTokens(user.id, user.role) };
   }
 
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
+      this.logger.warn(`Login fallido (usuario no encontrado): ${dto.email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
     const hashed = crypto.createHash('sha256').update(dto.password).digest('hex');
     if (hashed !== user.passwordHash) {
+      this.logger.warn(`Login fallido (password) para ${dto.email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
+    this.logger.log(`Login exitoso ${user.email} (${user.role})`);
     return { user: this.sanitize(user), ...this.generateTokens(user.id, user.role) };
   }
 
@@ -39,8 +46,10 @@ export class AuthService {
       const payload = this.jwtService.verify(dto.refreshToken, {
         secret: process.env.JWT_SECRET || 'dev_secret',
       });
+      this.logger.log(`Refresh token válido para usuario ${payload.sub}`);
       return this.generateTokens(payload.sub, payload.role);
     } catch (err) {
+      this.logger.warn('Refresh token inválido');
       throw new UnauthorizedException('Invalid refresh token');
     }
   }

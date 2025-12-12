@@ -4,7 +4,7 @@ describe('NotificationsService (unit)', () => {
   const service = new NotificationsService();
 
   it('loggea el cambio de estado de un envío', () => {
-    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const spy = jest.spyOn((service as any).logger, 'log').mockImplementation(() => {});
 
     service.notifyShipmentStatus('s-1', 'in_transit', 'user@test.com');
 

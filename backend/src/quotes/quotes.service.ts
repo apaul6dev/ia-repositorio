@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Quote, ServiceType } from '../entities/quote.entity';
@@ -6,6 +6,8 @@ import { CreateQuoteDto } from './dto/create-quote.dto';
 
 @Injectable()
 export class QuotesService {
+  private readonly logger = new Logger(QuotesService.name);
+
   constructor(
     @InjectRepository(Quote)
     private readonly quotesRepo: Repository<Quote>,
@@ -26,6 +28,9 @@ export class QuotesService {
       shipDate: dto.shipDate,
       expiresAt: new Date(Date.now() + 1000 * 60 * 60),
     });
+    this.logger.log(
+      `Quote creada ${quote.serviceType} ${dto.originZip}->${dto.destinationZip} price=${price}`,
+    );
     return this.quotesRepo.save(quote);
   }
 

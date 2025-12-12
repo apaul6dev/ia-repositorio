@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Quote } from '../entities/quote.entity';
@@ -13,6 +13,8 @@ import { User } from '../entities/user.entity';
 
 @Injectable()
 export class ShipmentsService {
+  private readonly logger = new Logger(ShipmentsService.name);
+
   constructor(
     @InjectRepository(Shipment)
     private readonly shipmentsRepo: Repository<Shipment>,
@@ -68,6 +70,9 @@ export class ShipmentsService {
       note: 'Reserva creada',
       changedBy: 'system',
     });
+    this.logger.log(
+      `Shipment creado ${saved.id} tracking=${saved.trackingCode} quote=${quote.id} user=${dto.userId ?? 'anon'}`,
+    );
     return this.findOne(saved.id);
   }
 
@@ -153,6 +158,7 @@ export class ShipmentsService {
       dto.status,
       shipment.user?.email || 'client',
     );
+    this.logger.log(`Estado actualizado shipment=${shipment.id} -> ${dto.status}`);
     return this.tracking(id);
   }
 
@@ -165,6 +171,7 @@ export class ShipmentsService {
       shipmentId,
       routeId,
     });
+    this.logger.log(`Asignación de ruta ${routeId} a shipment=${shipmentId}`);
     return this.assignmentsRepo.save(assignment);
   }
 
@@ -184,6 +191,7 @@ export class ShipmentsService {
     } else {
       shipment.operatorId = null;
     }
+    this.logger.log(`Operador ${operatorId ?? 'removed'} asignado a shipment=${shipmentId}`);
     return this.shipmentsRepo.save(shipment);
   }
 
@@ -195,6 +203,7 @@ export class ShipmentsService {
     if (user.role === 'operator' && shipment.operatorId && shipment.operatorId !== user.id) {
       throw new ForbiddenException('Shipment not assigned to operator');
     }
+    this.logger.log(`Update status por usuario ${user.id} role=${user.role} shipment=${id}`);
     return this.addStatus(id, { ...dto, changedBy: user.email || user.id });
   }
 

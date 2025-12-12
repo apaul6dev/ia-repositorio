@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from '../entities/payment.entity';
@@ -8,6 +8,8 @@ import { PaymentWebhookDto } from './dto/webhook.dto';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     @InjectRepository(Payment)
     private readonly paymentsRepo: Repository<Payment>,
@@ -27,6 +29,9 @@ export class PaymentsService {
       externalRef,
     });
     const saved = await this.paymentsRepo.save(payment);
+    this.logger.log(
+      `Pago iniciado para shipment=${dto.shipmentId} amount=${saved.amount} ref=${externalRef}`,
+    );
     return {
       payment: saved,
       checkoutUrl: `https://mockpay.local/checkout/${externalRef}`,
@@ -40,6 +45,7 @@ export class PaymentsService {
     if (!payment) throw new NotFoundException('Payment not found');
     payment.status = dto.status === 'paid' ? 'paid' : 'failed';
     if (payment.status === 'paid') payment.paidAt = new Date();
+    this.logger.log(`Webhook payment ref=${dto.externalRef} status=${payment.status}`);
     return this.paymentsRepo.save(payment);
   }
 

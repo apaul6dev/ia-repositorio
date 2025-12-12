@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Route } from '../entities/route.entity';
@@ -9,6 +9,8 @@ import { ShipmentsService } from '../shipments/shipments.service';
 
 @Injectable()
 export class RoutesService {
+  private readonly logger = new Logger(RoutesService.name);
+
   constructor(
     @InjectRepository(Route)
     private readonly routesRepo: Repository<Route>,
@@ -19,6 +21,7 @@ export class RoutesService {
 
   create(dto: CreateRouteDto) {
     const route = this.routesRepo.create(dto);
+    this.logger.log(`Ruta creada ${dto.name} region=${dto.region ?? 'N/A'}`);
     return this.routesRepo.save(route);
   }
 
@@ -29,6 +32,7 @@ export class RoutesService {
   async assign(routeId: string, dto: AssignShipmentDto) {
     const route = await this.routesRepo.findOne({ where: { id: routeId } });
     if (!route) throw new NotFoundException('Route not found');
+    this.logger.log(`Asignando envío ${dto.shipmentId} a ruta ${routeId}`);
     return this.shipmentsService.assignRoute(dto.shipmentId, routeId);
   }
 

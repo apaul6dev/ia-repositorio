@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -9,6 +9,8 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
@@ -24,7 +26,9 @@ export class UsersService {
       role: dto.role || 'client',
       passwordHash: this.hashPassword(dto.password),
     });
-    return this.usersRepo.save(user);
+    const saved = await this.usersRepo.save(user);
+    this.logger.log(`Usuario creado ${saved.email} role=${saved.role}`);
+    return saved;
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -48,24 +52,35 @@ export class UsersService {
 
   async addAddress(userId: string, dto: CreateAddressDto) {
     const address = this.addressesRepo.create({ ...dto, userId });
-    return this.addressesRepo.save(address);
+    const saved = await this.addressesRepo.save(address);
+    this.logger.log(`Dirección añadida user=${userId} address=${saved.id}`);
+    return saved;
   }
 
   async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto) {
     const address = await this.addressesRepo.findOne({
       where: { id: addressId, userId },
     });
-    if (!address) return null;
+    if (!address) {
+      this.logger.warn(`Intento de actualizar dirección inexistente ${addressId} user=${userId}`);
+      return null;
+    }
     Object.assign(address, dto);
-    return this.addressesRepo.save(address);
+    const saved = await this.addressesRepo.save(address);
+    this.logger.log(`Dirección actualizada ${addressId} user=${userId}`);
+    return saved;
   }
 
   async deleteAddress(userId: string, addressId: string) {
     const address = await this.addressesRepo.findOne({
       where: { id: addressId, userId },
     });
-    if (!address) return null;
+    if (!address) {
+      this.logger.warn(`Intento de borrar dirección inexistente ${addressId} user=${userId}`);
+      return null;
+    }
     await this.addressesRepo.remove(address);
+    this.logger.log(`Dirección eliminada ${addressId} user=${userId}`);
     return true;
   }
 
