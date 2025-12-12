@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Flujo completo UI (login, cotizar, reservar, tracking, panel)', () => {
+  test.use({
+    baseURL: process.env.E2E_BASE_URL || `http://127.0.0.1:${process.env.E2E_PORT || 4300}`,
+    navigationTimeout: 60000,
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.route('**/auth/login', (route) =>
       route.fulfill({
@@ -96,8 +101,7 @@ test.describe('Flujo completo UI (login, cotizar, reservar, tracking, panel)', (
   });
 
   test('operador puede cotizar, reservar y consultar tracking', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForURL('**/login');
+    await page.goto('/login');
 
     await page.fill('input[name="email"]', 'op@test.com');
     await page.fill('input[name="password"]', 'secret123');
@@ -132,6 +136,6 @@ test.describe('Flujo completo UI (login, cotizar, reservar, tracking, panel)', (
     await expect(page.getByText('in_transit')).toBeVisible();
 
     await page.click('a[href="/admin"]');
-    await expect(page.getByText('PKG-TRACK')).toBeVisible();
+    await expect(page.locator('table').getByRole('cell', { name: 'PKG-TRACK' })).toBeVisible();
   });
 });

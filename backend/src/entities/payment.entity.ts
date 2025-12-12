@@ -10,6 +10,11 @@ import { Shipment } from './shipment.entity';
 
 export type PaymentStatus = 'pending' | 'paid' | 'failed';
 
+const paymentDateType =
+  (process.env.DB_TYPE || process.env.TYPEORM_CONNECTION || 'postgres') === 'sqlite'
+    ? 'datetime'
+    : 'timestamptz';
+
 @Entity('payments')
 export class Payment {
   @PrimaryGeneratedColumn('uuid')
@@ -36,7 +41,7 @@ export class Payment {
   @Column({ nullable: true })
   externalRef?: string;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ type: paymentDateType, nullable: true })
   paidAt?: Date;
 
   @CreateDateColumn()

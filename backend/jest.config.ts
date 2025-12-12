@@ -26,7 +26,7 @@ const config: Config = {
   coverageDirectory: 'coverage',
   testEnvironment: 'node',
   moduleNameMapper: {
-    'src/(.*)': '<rootDir>/src/$1',
+    '^src/(.*)$': '<rootDir>/src/$1',
   },
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/src/migrations/', '/src/.+/dto/', '/src/entities/'],
 };

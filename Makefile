@@ -44,4 +44,10 @@ test-backend:
 test-frontend:
 	cd frontend && npm test
 
+test-backend-e2e:
+	cd backend && npm run test:e2e
+
+test-frontend-e2e:
+	cd frontend && npm run e2e
+
 test: test-backend test-frontend

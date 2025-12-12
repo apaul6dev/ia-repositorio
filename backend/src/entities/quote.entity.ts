@@ -10,6 +10,11 @@ import { User } from './user.entity';
 
 export type ServiceType = 'express' | 'standard' | 'economic';
 
+const quoteDateType =
+  (process.env.DB_TYPE || process.env.TYPEORM_CONNECTION || 'postgres') === 'sqlite'
+    ? 'datetime'
+    : 'timestamptz';
+
 @Entity('quotes')
 export class Quote {
   @PrimaryGeneratedColumn('uuid')
@@ -45,7 +50,7 @@ export class Quote {
   @CreateDateColumn()
   createdAt!: Date;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ type: quoteDateType, nullable: true })
   expiresAt?: Date;
 
   @ManyToOne(() => User, { nullable: true })

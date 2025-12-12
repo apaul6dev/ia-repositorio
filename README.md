@@ -21,6 +21,7 @@ Claves por capa:
 - Frontend (`frontend/.env`): `API_URL`, `FRONTEND_PORT`
 - BD (`db/.env`): `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `DB_PORT`
 - Root opcional (`.env`): `BACKEND_PORT`, `FRONTEND_PORT`, `DB_PORT`
+- Backend opcional: `DB_TYPE` (por defecto `postgres`, usar `sqlite` solo en entornos de prueba como los e2e locales).
 
 ## Arquitectura (Mermaid)
 ```mermaid
@@ -346,7 +347,7 @@ Datos seed (migración)
 
 ## Pruebas automatizadas
 ### Backend (NestJS + Jest)
-- Comandos: `cd backend && npm test` (unit + e2e) o `npm run test:coverage` (reporte en `backend/coverage`).
+- Comandos: `cd backend && npm test` (unit + e2e), `npm run test:e2e` (solo flujo E2E) o `npm run test:coverage` (reporte en `backend/coverage`).
 - Configuración: `jest.config.ts` con `ts-jest`, mapeo `src/*` y SQLite en memoria (`test/test-datasource.ts` y módulos de prueba) para no depender de Postgres; `JWT_SECRET` se inyecta en los tests. Cobertura excluye DTOs, migraciones y archivos `.module.ts` para no exigir tests sobre wiring/configuración.
 - Casos cubiertos:
   - Auth (`test/auth.service.spec.ts`): registro devuelve payload saneado y tokens, rechaza email duplicado, login válido/inválido y refresh válido/inválido.
@@ -363,7 +364,7 @@ Datos seed (migración)
 ### Frontend (Angular + Karma/Playwright)
 - Unit tests: `cd frontend && npm test` usa Karma con `ChromeHeadless` (`karma.conf.js`), cobertura en `frontend/coverage`.
 - Casos: guard de auth e interceptor validan sesión/redirección; componentes `Quote`, `Reserve`, `Login`, `Tracking` y `AdminDashboard` validan envío de formularios, bloqueo de usuario cliente, búsqueda de usuarios, creación de reservas, consultas de tracking, actualizaciones de estado y asignaciones (admin/autoasignación).
-- E2E UI: `npm run e2e` ejecuta Playwright (`playwright.config.ts`), `E2E_BASE_URL` opcional (por defecto `http://localhost:4200`). El flujo `e2e/shipment-flow.spec.ts` maqueta las peticiones REST y recorre login → cotizar → reservar → tracking → panel operador/admin.
+- E2E UI: `npm run e2e` ejecuta Playwright (`playwright.config.ts`), `E2E_BASE_URL` opcional (por defecto `http://127.0.0.1:4300`). El flujo `e2e/shipment-flow.spec.ts` maqueta las peticiones REST y recorre login → cotizar → reservar → tracking → panel operador/admin. La config usa `chromium` de Playwright por defecto; si no tienes el binario, corre `npx playwright install chromium` o define `PLAYWRIGHT_CHANNEL=chrome` para usar tu Chrome local. `webServer` levanta `npm run start:e2e` por defecto (servidor Angular en 127.0.0.1:4300); puedes personalizar host/puerto o comando con `E2E_PORT`/`E2E_BASE_URL`/`E2E_START_CMD`, o reutilizar un servidor ya corriendo en esa URL. Si tu entorno bloquea abrir puertos, define `E2E_SKIP_WEBSERVER=true` y asegura un servidor Angular disponible en `E2E_BASE_URL`.
 
 ## Notas
 - Migraciones activadas (`migrationsRun=true`); `synchronize` desactivado.

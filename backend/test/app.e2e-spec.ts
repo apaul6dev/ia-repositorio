@@ -17,6 +17,8 @@ import { RouteAssignment } from '../src/entities/route-assignment.entity';
 import { Payment } from '../src/entities/payment.entity';
 
 describe('Parcel API (e2e)', () => {
+  jest.setTimeout(20000);
+  process.env.DB_TYPE = 'sqlite';
   let app: INestApplication;
   let httpServer: any;
   let clientToken: string;
@@ -48,7 +50,7 @@ describe('Parcel API (e2e)', () => {
 
     app = moduleRef.createNestApplication();
     await app.init();
-    httpServer = app.getHttpServer();
+    httpServer = app.getHttpAdapter().getInstance();
   });
 
   afterAll(async () => {
