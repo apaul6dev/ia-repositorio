@@ -346,11 +346,15 @@ Datos seed (migración)
 ## Pruebas automatizadas
 ### Backend (NestJS + Jest)
 - Comandos: `cd backend && npm test` (unit + e2e) o `npm run test:coverage` (reporte en `backend/coverage`).
-- Configuración: `jest.config.ts` con `ts-jest`, mapeo `src/*` y SQLite en memoria (`test/test-datasource.ts` y módulos de prueba) para no depender de Postgres; `JWT_SECRET` se inyecta en los tests.
+- Configuración: `jest.config.ts` con `ts-jest`, mapeo `src/*` y SQLite en memoria (`test/test-datasource.ts` y módulos de prueba) para no depender de Postgres; `JWT_SECRET` se inyecta en los tests. Cobertura excluye DTOs, migraciones y archivos `.module.ts` para no exigir tests sobre wiring/configuración.
 - Casos cubiertos:
   - Auth (`test/auth.service.spec.ts`): registro devuelve payload saneado y tokens, rechaza email duplicado, login válido/inválido y refresh válido/inválido.
   - Quotes (`test/quotes.service.spec.ts`): cálculo de precio por peso volumétrico y recuperación por id.
-  - Shipments (`test/shipments.service.spec.ts`): requiere quote existente y dueño correcto, genera tracking + historial inicial, agrega estados notificando, bloquea operadores no asignados, asigna/desasigna operadores.
+  - Shipments (`test/shipments.service.spec.ts`): requiere quote existente y dueño correcto, genera tracking + historial inicial, agrega estados notificando, bloquea operadores no asignados, asigna/desasigna operadores, asigna rutas y obtiene tracking vía código.
+  - Routes (`test/routes.service.spec.ts`): creación/listado de rutas, validación de ruta inexistente al asignar y delegación al servicio de envíos, listado de asignaciones por ruta.
+  - Payments (`test/payments.service.spec.ts`): inicia pagos con referencias externas, fallback al precio final del envío, manejo de envíos inexistentes, webhook actualizando a `paid` y búsquedas/not found.
+  - Users (`test/users.service.spec.ts`): creación con hashing y rol por defecto, búsqueda por email/id con direcciones, CRUD de direcciones y búsqueda de usuarios por término/rol con query builder mock.
+  - Notifications (`test/notifications.service.spec.ts`): logging del cambio de estado de envíos.
   - E2E API (`test/app.e2e-spec.ts`): flujo completo registro → cotizar → crear envío → tracking → asignar operador → actualizar estado, y verificación de guard JWT en rutas de operador.
 
 ### Frontend (Angular + Karma/Playwright)

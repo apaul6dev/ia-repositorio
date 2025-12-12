@@ -204,4 +204,75 @@ describe('ShipmentsService (unit)', () => {
     const unassigned = await service.assignOperator(shipment.id, null);
     expect(unassigned.operatorId).toBeNull();
   });
+
+  it('asigna rutas a un envío existente y devuelve la asignación', async () => {
+    const route = await routesRepo.save({
+      id: 'route-1',
+      name: 'Ruta Norte',
+      region: 'Norte',
+      active: true,
+    } as Route);
+    const shipment = await service.create({
+      quoteId: baseQuote.id,
+      originAddress: 'A',
+      destinationAddress: 'B',
+      originZip: '1000',
+      destinationZip: '2000',
+      pickupDate: '2024-01-01',
+      pickupSlot: 'AM',
+      weightKg: 1,
+      volumeM3: 0.1,
+      serviceType: 'standard',
+      priceQuote: 10,
+      priceFinal: 10,
+    });
+
+    const assignment = await service.assignRoute(shipment.id, route.id);
+
+    expect(assignment.routeId).toBe(route.id);
+    expect(assignment.shipmentId).toBe(shipment.id);
+  });
+
+  it('lanza error al asignar una ruta inexistente', async () => {
+    const shipment = await service.create({
+      quoteId: baseQuote.id,
+      originAddress: 'Origen',
+      destinationAddress: 'Destino',
+      originZip: '1000',
+      destinationZip: '2000',
+      pickupDate: '2024-01-01',
+      pickupSlot: 'AM',
+      weightKg: 1,
+      volumeM3: 0.1,
+      serviceType: 'standard',
+      priceQuote: 10,
+      priceFinal: 10,
+    });
+
+    await expect(service.assignRoute(shipment.id, 'missing-route')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('recupera tracking usando trackingCode', async () => {
+    const shipment = await service.create({
+      quoteId: baseQuote.id,
+      originAddress: 'Origen',
+      destinationAddress: 'Destino',
+      originZip: '1000',
+      destinationZip: '2000',
+      pickupDate: '2024-01-01',
+      pickupSlot: 'AM',
+      weightKg: 1,
+      volumeM3: 0.1,
+      serviceType: 'standard',
+      priceQuote: 10,
+      priceFinal: 10,
+    });
+
+    const history = await service.tracking(shipment.trackingCode);
+
+    expect(history[0].status).toBe('created');
+    expect(history.length).toBeGreaterThan(0);
+  });
 });

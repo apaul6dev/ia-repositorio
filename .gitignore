@@ -23,9 +23,12 @@ db-data
 # Angular
 frontend/.angular
 frontend/.cache
+frontend/coverage
+coverage
 
 # Nest
 backend/.nest
+backend/coverage
 
 # Env
 .env.local

@@ -7,12 +7,26 @@ const config: Config = {
   transform: {
     '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
-  collectCoverageFrom: ['src/**/*.ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/main.ts',
+    '!src/**/dto/**/*.ts',
+    '!src/migrations/**/*.ts',
+    '!src/**/*.module.ts',
+  ],
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/',
+    '/src/migrations/',
+    '/src/.+/dto/',
+    '\\.module\\.ts$',
+  ],
   coverageDirectory: 'coverage',
   testEnvironment: 'node',
   moduleNameMapper: {
     'src/(.*)': '<rootDir>/src/$1',
   },
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/src/migrations/', '/src/.+/dto/'],
 };
 
 export default config;
