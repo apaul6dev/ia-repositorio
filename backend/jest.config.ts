@@ -13,6 +13,7 @@ const config: Config = {
     '!src/**/dto/**/*.ts',
     '!src/migrations/**/*.ts',
     '!src/**/*.module.ts',
+    '!src/entities/**/*.ts',
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
@@ -20,13 +21,14 @@ const config: Config = {
     '/src/migrations/',
     '/src/.+/dto/',
     '\\.module\\.ts$',
+    '/src/entities/',
   ],
   coverageDirectory: 'coverage',
   testEnvironment: 'node',
   moduleNameMapper: {
     'src/(.*)': '<rootDir>/src/$1',
   },
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/src/migrations/', '/src/.+/dto/'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/src/migrations/', '/src/.+/dto/', '/src/entities/'],
 };
 
 export default config;

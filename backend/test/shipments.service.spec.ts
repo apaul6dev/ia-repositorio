@@ -275,4 +275,144 @@ describe('ShipmentsService (unit)', () => {
     expect(history[0].status).toBe('created');
     expect(history.length).toBeGreaterThan(0);
   });
+
+  it('setea userId desde la quote cuando corresponde', async () => {
+    baseQuote.userId = 'client-quote';
+    await quotesRepo.save(baseQuote);
+
+    const shipment = await service.create({
+      quoteId: baseQuote.id,
+      originAddress: 'Origen',
+      destinationAddress: 'Destino',
+      originZip: '1000',
+      destinationZip: '2000',
+      pickupDate: '2024-01-01',
+      pickupSlot: 'AM',
+      priceQuote: 10,
+      priceFinal: 10,
+    } as any);
+
+    expect(shipment.user).toEqual({ id: 'client-quote' });
+  });
+
+  it('findAll construye filtros con query builder', async () => {
+    const andWhere = jest.fn().mockReturnThis();
+    const leftJoin = jest.fn().mockReturnThis();
+    const leftJoinAndSelect = jest.fn().mockReturnThis();
+    const orderBy = jest.fn().mockReturnThis();
+    const getMany = jest.fn().mockResolvedValue([]);
+    (shipmentsRepo as any).createQueryBuilder = jest.fn().mockReturnValue({
+      leftJoinAndSelect,
+      leftJoin,
+      orderBy,
+      andWhere,
+      getMany,
+    });
+
+    await service.findAll({
+      status: 'created' as any,
+      userId: 'u-1',
+      operatorId: 'op-1',
+      routeId: 'route-1',
+      dateFrom: '2024-01-01',
+      dateTo: '2024-02-01',
+    });
+
+    expect(leftJoinAndSelect).toHaveBeenCalledWith('shipment.user', 'user');
+    expect(andWhere).toHaveBeenCalledWith('shipment.status = :status', { status: 'created' });
+    expect(leftJoin).toHaveBeenCalledWith('shipment.assignments', 'assignments');
+    expect(andWhere).toHaveBeenCalledWith('assignments.routeId = :routeId', {
+      routeId: 'route-1',
+    });
+    expect(getMany).toHaveBeenCalled();
+  });
+
+  it('lanza NotFound cuando no existe shipment (findOne/tracking/addStatus)', async () => {
+    await expect(service.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.tracking('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.addStatus('missing', { status: 'incident' } as any)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('lanza NotFound cuando la ruta o el envío no existen al asignar', async () => {
+    await expect(service.assignRoute('missing-shipment', 'route-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await routesRepo.save({ id: 'route-2', name: 'Ruta', active: true } as Route);
+    const created = await service.create({
+      quoteId: baseQuote.id,
+      originAddress: 'A',
+      destinationAddress: 'B',
+      originZip: '1000',
+      destinationZip: '2000',
+      pickupDate: '2024-01-01',
+      pickupSlot: 'AM',
+      weightKg: 1,
+      volumeM3: 0.1,
+      serviceType: 'standard',
+      priceQuote: 10,
+      priceFinal: 10,
+    });
+    await expect(service.assignRoute(created.id, 'missing-route')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('lanza NotFound cuando el operador no existe al asignar', async () => {
+    const shipment = await service.create({
+      quoteId: baseQuote.id,
+      originAddress: 'A',
+      destinationAddress: 'B',
+      originZip: '1000',
+      destinationZip: '2000',
+      pickupDate: '2024-01-01',
+      pickupSlot: 'AM',
+      weightKg: 1,
+      volumeM3: 0.1,
+      serviceType: 'standard',
+      priceQuote: 10,
+      priceFinal: 10,
+    });
+
+    await expect(service.assignOperator(shipment.id, 'missing-operator')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('actualiza estado cuando operador asignado coincide', async () => {
+    await usersRepo.save({
+      id: 'op-2',
+      email: 'op2@test.com',
+      passwordHash: 'h',
+      role: 'operator',
+    } as User);
+    const shipment = await service.create({
+      quoteId: baseQuote.id,
+      originAddress: 'A',
+      destinationAddress: 'B',
+      originZip: '1000',
+      destinationZip: '2000',
+      pickupDate: '2024-01-01',
+      pickupSlot: 'AM',
+      weightKg: 1,
+      volumeM3: 0.1,
+      serviceType: 'standard',
+      priceQuote: 10,
+      priceFinal: 10,
+    });
+    await service.assignOperator(shipment.id, 'op-2');
+    const addStatusSpy = jest.spyOn(service as any, 'addStatus');
+
+    await service.updateStatusAsUser(
+      shipment.id,
+      { status: 'in_transit', note: 'ok' } as any,
+      { id: 'op-2', role: 'operator', email: 'op2@test.com' } as any,
+    );
+
+    expect(addStatusSpy).toHaveBeenCalledWith(
+      shipment.id,
+      expect.objectContaining({ status: 'in_transit', changedBy: 'op2@test.com' }),
+    );
+  });
 });
