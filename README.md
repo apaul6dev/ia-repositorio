@@ -345,6 +345,62 @@ Datos seed (migración)
 - `docker-compose.yml`: orquestación principal (db/backend/frontend).
 - Logging backend: servicios principales (Auth, Users, Shipments, Routes, Payments, Quotes, Notifications) usan `Logger` de Nest para registrar eventos relevantes (registro/login/refresh, creación de cotizaciones, creación/estado/asignación de envíos, rutas, pagos y notificaciones).
 
+## Conexiones entre capas (código)
+Docker (servicios y dependencias) — `docker-compose.yml`:
+```yaml
+services:
+  db:
+    env_file:
+      - ./db/.env
+    ports:
+      - "${DB_PORT:-5432}:5432"
+  backend:
+    env_file:
+      - ./backend/.env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+  frontend:
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+```
+
+Backend → DB (TypeORM) — `backend/src/app.module.ts`:
+```ts
+TypeOrmModule.forRoot({
+  type: 'postgres',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  username: process.env.DB_USER || 'parcels',
+  password: process.env.DB_PASS || 'parcels',
+  database: process.env.DB_NAME || 'parcels',
+  // entities, migrations, etc.
+});
+```
+
+Frontend → Backend (API base) — `frontend/src/environments/environment.ts` y `frontend/src/app/services/api.service.ts`:
+```ts
+export const environment = {
+  production: false,
+  apiUrl: (typeof window !== 'undefined' && (window as any).__API_URL__) ||
+    (typeof process !== 'undefined' && process.env && process.env['API_URL']) ||
+    'http://localhost:3000',
+};
+```
+```ts
+private readonly baseUrl = environment.apiUrl;
+
+login(payload: any): Observable<any> {
+  return this.http.post(`${this.baseUrl}/auth/login`, payload);
+}
+```
+
 ## Pruebas automatizadas
 ### Backend (NestJS + Jest)
 - Comandos: `cd backend && npm test` (unit + e2e), `npm run test:e2e` (solo flujo E2E) o `npm run test:coverage` (reporte en `backend/coverage`).
